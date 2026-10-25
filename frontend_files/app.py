@@ -21,16 +21,16 @@ BACKEND_URL = "http://backend:7860"
 if option == "Single Item Online Forecast":
     st.header("📈 Single Item Sales Estimator")
     st.write("Adjust the product and store attributes below to retrieve a real-time sales forecast.")
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         product_weight = st.slider("Product Weight (kg)", min_value=4.0, max_value=25.0, value=12.5, step=0.1)
         product_allocated_area = st.slider("Product Allocated Display Area Ratio", min_value=0.001, max_value=0.3, value=0.05, step=0.001)
         product_mrp = st.number_input("Product Maximum Retail Price ($)", min_value=10.0, max_value=300.0, value=147.0, step=1.0)
         product_sugar = st.selectbox("Product Sugar Content", ["Low Sugar", "Regular", "No Sugar"])
         product_category = st.selectbox("Product Category Type", ["Perishables", "Non Perishables"])
-        
+
     with col2:
         store_age = st.number_input("Store Age (Years)", min_value=1, max_value=50, value=15, step=1)
         store_size = st.selectbox("Store Size", ["Small", "Medium", "High"])
@@ -52,11 +52,11 @@ if option == "Single Item Online Forecast":
             "Store_Age_Years": int(store_age),
             "Product_Type_Category": product_category
         }
-        
+
         try:
             with st.spinner("Communicating with prediction engine..."):
                 response = requests.post(f"{BACKEND_URL}/v1/predict", json=payload)
-                
+
             if response.status_code == 200:
                 prediction_value = response.json()["prediction"]
                 st.success(f"💰 Estimated Product Store Sales Total: **${prediction_value:,.2f}**")
@@ -68,31 +68,31 @@ if option == "Single Item Online Forecast":
 elif option == "Batch File Upload":
     st.header("📁 Bulk Batch Forecasts")
     st.write("Upload a structured `.csv` file to predict total sales over multiple stores and product items simultaneously.")
-    
+
     uploaded_file = st.file_uploader("Choose a CSV file:", type=["csv"])
-    
+
     if uploaded_file is not None:
         # Show preview
         df_preview = pd.read_csv(uploaded_file)
         st.write("### Uploaded Data Preview")
         st.dataframe(df_preview.head(5))
-        
+
         # Prepare buffer for API dispatch
         uploaded_file.seek(0)
         files_payload = {"file": (uploaded_file.name, uploaded_file.read(), "text/csv")}
-        
+
         if st.button("Run Batch Predictions"):
             try:
                 with st.spinner("Generating batch forecasts..."):
                     response = requests.post(f"{BACKEND_URL}/v1/predictbatch", files=files_payload)
-                    
+
                 if response.status_code == 200:
                     results = response.json()
-                    
+
                     # Map predictions back to preview dataframe
                     pred_list = [results[str(i)] for i in range(len(df_preview))]
                     df_preview["Predicted_Store_Sales_Total"] = pred_list
-                    
+
                     st.success("🎉 Forecasts completed successfully!")
                     st.dataframe(df_preview)
                 else:
